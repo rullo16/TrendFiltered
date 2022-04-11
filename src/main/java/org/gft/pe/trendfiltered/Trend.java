@@ -57,7 +57,7 @@ public class Trend extends SiddhiEventEngine<TrendFilteredParams> {
 
         Expression sequence = (Expressions.sequence(exp1,filterExp,Expressions.within(duration, SiddhiTimeUnit.SECONDS)));
         fromClause.add(sequence);
-
+        System.out.println(fromClause.toSiddhiEpl());
         return fromClause;
     }
 

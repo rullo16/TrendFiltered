@@ -21,23 +21,27 @@ package org.gft.pe.trendfiltered;
 import org.apache.streampipes.commons.exceptions.SpRuntimeException;
 import org.apache.streampipes.model.DataProcessorType;
 import org.apache.streampipes.model.graph.DataProcessorDescription;
+import org.apache.streampipes.model.graph.DataProcessorInvocation;
 import org.apache.streampipes.model.runtime.Event;
 import org.apache.streampipes.model.schema.PropertyScope;
 import org.apache.streampipes.sdk.builder.ProcessingElementBuilder;
 import org.apache.streampipes.sdk.builder.StreamRequirementsBuilder;
+import org.apache.streampipes.sdk.extractor.ProcessingElementParameterExtractor;
 import org.apache.streampipes.sdk.helpers.*;
 import org.apache.streampipes.sdk.utils.Assets;
 import org.apache.streampipes.wrapper.context.EventProcessorRuntimeContext;
 import org.apache.streampipes.wrapper.routing.SpOutputCollector;
+import org.apache.streampipes.wrapper.siddhi.engine.SiddhiEventEngine;
 import org.apache.streampipes.wrapper.siddhi.query.expression.RelationalOperator;
 import org.apache.streampipes.wrapper.standalone.ConfiguredEventProcessor;
 import org.apache.streampipes.wrapper.standalone.ProcessorParams;
 import org.apache.streampipes.wrapper.standalone.StreamPipesDataProcessor;
+import org.apache.streampipes.wrapper.standalone.declarer.StandaloneEventProcessingDeclarer;
 
 import java.util.List;
 
 
-public class TrendFilteredController extends StreamPipesDataProcessor {
+public class TrendFilteredController extends StandaloneEventProcessingDeclarer<TrendFilteredParams> {
 
   private static final String Input = "input";
   private static final String Increase = "increase";
@@ -69,18 +73,25 @@ public class TrendFilteredController extends StreamPipesDataProcessor {
             .build();
   }
 
-  @Override
-  public void onInvocation(ProcessorParams processorParams,
-                           SpOutputCollector out,
-                           EventProcessorRuntimeContext ctx) throws SpRuntimeException  {
-    String operation = processorParams.extractor().selectedSingleValue(Operation,String.class);
-    int increase = processorParams.extractor().singleValueParameter(Increase, Integer.class);
-    int duration = processorParams.extractor().singleValueParameter(Duration, Integer.class);
-    String input = processorParams.extractor().mappingPropertyValue(Input);
-    List<String> outputFieldSelectors = processorParams.extractor().outputKeySelectors();
+  public TrendOperator getOperation(String operation) {
+    if(operation.equals("Increase")){
+      return TrendOperator.INCREASE;
+    } else {
+      return TrendOperator.DECREASE;
+    }
+  }
 
-    this.threshold = processorParams.extractor().singleValueParameter(Threshold,Double.class);
-    String stringFilterOperation = processorParams.extractor().selectedSingleValue(FilterOperation,String.class);
+
+  @Override
+  public ConfiguredEventProcessor<TrendFilteredParams> onInvocation(DataProcessorInvocation dataProcessorInvocation, ProcessingElementParameterExtractor extractor) {
+    String operation = extractor.selectedSingleValue(Operation,String.class);
+    int increase = extractor.singleValueParameter(Increase, Integer.class);
+    int duration = extractor.singleValueParameter(Duration, Integer.class);
+    String input = extractor.mappingPropertyValue(Input);
+    List<String> outputFieldSelectors = extractor.outputKeySelectors();
+
+    this.threshold = extractor.singleValueParameter(Threshold,Double.class);
+    String stringFilterOperation = extractor.selectedSingleValue(FilterOperation,String.class);
     RelationalOperator filterOperation = RelationalOperator.GREATER_THAN;
 
     if (stringFilterOperation.equals("<=")) {
@@ -95,26 +106,7 @@ public class TrendFilteredController extends StreamPipesDataProcessor {
       filterOperation = RelationalOperator.NOT_EQUALS;
     }
 
-    params = new TrendFilteredParams(processorParams.getGraph(), getOperation(operation),increase,duration,input,filterOperation,this.threshold);
-
+    params = new TrendFilteredParams(dataProcessorInvocation, getOperation(operation),increase,duration,input,filterOperation,this.threshold);
+    return new ConfiguredEventProcessor<>(params,Trend::new);
   }
-
-  public TrendOperator getOperation(String operation) {
-    if(operation.equals("Increase")){
-      return TrendOperator.INCREASE;
-    } else {
-      return TrendOperator.DECREASE;
-    }
-  }
-
-  @Override
-  public void onEvent(Event event, SpOutputCollector out){
-    processor = new ConfiguredEventProcessor<>(params,Trend::new);
-    out.collect(event);
-  }
-
-  @Override
-  public void onDetach(){
-  }
-
 }
