@@ -49,8 +49,6 @@ public class TrendFilteredController extends StandaloneEventProcessingDeclarer<T
   private static final String Duration = "duration";
   private static final String FilterOperation = "fOperation";
   private static final String Threshold = "threshold";
-  private TrendFilteredParams params;
-  private ConfiguredEventProcessor processor;
   private double threshold;
 
   @Override
@@ -66,7 +64,7 @@ public class TrendFilteredController extends StandaloneEventProcessingDeclarer<T
             .requiredFloatParameter(Labels.withId(Threshold))
             .requiredSingleValueSelection(Labels.withId(FilterOperation),Options.from("<", "<=", ">",
                     ">=", "==", "!="))
-            .requiredSingleValueSelection(Labels.withId(Operation), Options.from("increase","Decrease"))
+            .requiredSingleValueSelection(Labels.withId(Operation), Options.from("Increase","Decrease"))
             .requiredIntegerParameter(Labels.withId(Increase), 0, 500, 1)
             .requiredIntegerParameter(Labels.withId(Duration))
             .outputStrategy(OutputStrategies.custom())
@@ -106,7 +104,7 @@ public class TrendFilteredController extends StandaloneEventProcessingDeclarer<T
       filterOperation = RelationalOperator.NOT_EQUALS;
     }
 
-    params = new TrendFilteredParams(dataProcessorInvocation, getOperation(operation),increase,duration,input,filterOperation,this.threshold);
+    TrendFilteredParams params = new TrendFilteredParams(dataProcessorInvocation, getOperation(operation),increase,duration,input,filterOperation,this.threshold,outputFieldSelectors);
     return new ConfiguredEventProcessor<>(params,Trend::new);
   }
 }

@@ -3,6 +3,7 @@ package org.gft.pe.trendfiltered;
 import org.apache.streampipes.wrapper.siddhi.SiddhiAppConfig;
 import org.apache.streampipes.wrapper.siddhi.SiddhiAppConfigBuilder;
 import org.apache.streampipes.wrapper.siddhi.SiddhiQueryBuilder;
+import org.apache.streampipes.wrapper.siddhi.constants.SiddhiStreamSelector;
 import org.apache.streampipes.wrapper.siddhi.engine.SiddhiEventEngine;
 import org.apache.streampipes.wrapper.siddhi.engine.callback.SiddhiDebugCallback;
 import org.apache.streampipes.wrapper.siddhi.model.SiddhiProcessorParams;
@@ -15,12 +16,17 @@ import org.apache.streampipes.wrapper.siddhi.query.expression.pattern.PatternCou
 import java.util.List;
 
 public class Trend extends SiddhiEventEngine<TrendFilteredParams> {
+
     public Trend(){
         super();
     }
 
     public Trend(SiddhiDebugCallback callback){
         super(callback);
+    }
+
+    private Expression makeProperty(String fieldName) {
+        return Expressions.property(SiddhiStreamSelector.FIRST_INPUT_STREAM, fieldName);
     }
 
     public FromClause fromStatement(SiddhiProcessorParams<TrendFilteredParams> siddhiProcessorParams){
@@ -30,20 +36,17 @@ public class Trend extends SiddhiEventEngine<TrendFilteredParams> {
         int duration = trendFilteredParams.getDuration();
         double increase = trendFilteredParams.getIncrease();
 
+        increase = (increase/100) +1;
+
         RelationalOperator operator = trendFilteredParams.getFilterOperation();
         Double threshold = trendFilteredParams.getThreshold();
 
 
-
-
-        increase = (increase/100) +1;
-
         FromClause fromClause = FromClause.create();
         Expression filter = new RelationalOperatorExpression(operator,Expressions.property(inputProperty),Expressions.staticValue(threshold));
 
-
-        StreamExpression exp1 = Expressions.filter(Expressions.every(Expressions.stream("e1", siddhiProcessorParams.getInputStreamNames().get(0))),filter);
-        StreamExpression exp2 = Expressions.filter(Expressions.stream("e2",siddhiProcessorParams.getInputStreamNames().get(0)),filter);
+        StreamExpression exp1 = Expressions.every(Expressions.stream("e1", siddhiProcessorParams.getInputStreamNames().get(0)));
+        StreamExpression exp2 = Expressions.filter(Expressions.stream("e2", siddhiProcessorParams.getInputStreamNames().get(0)),filter);
 
         PropertyExpressionBase mathExp = trendFilteredParams.getOperator() == TrendOperator.INCREASE ?
                 Expressions.divide(Expressions.property(inputProperty),Expressions.staticValue(increase)) :
@@ -61,23 +64,25 @@ public class Trend extends SiddhiEventEngine<TrendFilteredParams> {
         return fromClause;
     }
 
-    private SelectClause selectStatement(SiddhiProcessorParams<TrendFilteredParams> siddhiProcessorParams){
+    private SelectClause selectStatement(SiddhiProcessorParams<TrendFilteredParams> siddhiParams) {
         SelectClause selectClause = SelectClause.create();
-        List<String> outputFieldSelectors = siddhiProcessorParams.getParams().getOutputFieldSelectors();
-        //"->" lambda expression
-        outputFieldSelectors.forEach(outputFieldSelector -> selectClause.addProperty(Expressions.property("e2",outputFieldSelector,"last")));
+        List<String> outputFieldSelectors = siddhiParams.getParams().getOutputFieldSelectors();
+        outputFieldSelectors.forEach(outputFieldSelector -> selectClause.addProperty(Expressions.property("e2", outputFieldSelector, "last")));
 
         return selectClause;
     }
 
-
     @Override
-    public SiddhiAppConfig makeStatements(SiddhiProcessorParams<TrendFilteredParams> siddhiProcessorParams, String s) {
+    public SiddhiAppConfig makeStatements(SiddhiProcessorParams<TrendFilteredParams> siddhiParams,
+                                          String finalInsertIntoStreamName) {
 
-        InsertIntoClause insertIntoClause = InsertIntoClause.create(s);
-        return SiddhiAppConfigBuilder.create()
-                .addQuery(SiddhiQueryBuilder.create(fromStatement(siddhiProcessorParams),s)
-                        .withSelectClause(selectStatement(siddhiProcessorParams))
+        InsertIntoClause insertIntoClause = InsertIntoClause.create(finalInsertIntoStreamName);
+
+        return SiddhiAppConfigBuilder
+                .create()
+                .addQuery(SiddhiQueryBuilder
+                        .create(fromStatement(siddhiParams), insertIntoClause)
+                        .withSelectClause(selectStatement(siddhiParams))
                         .build())
                 .build();
     }

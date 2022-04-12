@@ -21,7 +21,7 @@ public class TrendFilteredParams extends EventProcessorBindingParams {
 
 
 
-    public TrendFilteredParams(DataProcessorInvocation graph, TrendOperator operator, int increase, int duration, String input, RelationalOperator filterOperation, double threshold) {
+    public TrendFilteredParams(DataProcessorInvocation graph, TrendOperator operator, int increase, int duration, String input, RelationalOperator filterOperation, double threshold, List<String> outputFieldSelectors) {
         super(graph);
         this.operator = operator;
         this.increase = increase;
