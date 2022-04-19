@@ -63,7 +63,7 @@ public class TrendFilteredController extends StandaloneEventProcessingDeclarer<T
               .build())
             .requiredFloatParameter(Labels.withId(Threshold))
             .requiredSingleValueSelection(Labels.withId(FilterOperation),Options.from("<", "<=", ">",
-                    ">=", "==", "!="))
+                    ">=", "!="))
             .requiredSingleValueSelection(Labels.withId(Operation), Options.from("Increase","Decrease"))
             .requiredIntegerParameter(Labels.withId(Increase), 0, 500, 1)
             .requiredIntegerParameter(Labels.withId(Duration))
@@ -98,8 +98,8 @@ public class TrendFilteredController extends StandaloneEventProcessingDeclarer<T
       filterOperation = RelationalOperator.LESSER_THAN;
     } else if (stringFilterOperation.equals(">=")) {
       filterOperation = RelationalOperator.GREATER_EQUALS;
-    } else if (stringFilterOperation.equals("==")) {
-      filterOperation = RelationalOperator.EQUALS;
+    //} else if (stringFilterOperation.equals("==")) {
+      //filterOperation = RelationalOperator.EQUALS;
     } else if (stringFilterOperation.equals("!=")) {
       filterOperation = RelationalOperator.NOT_EQUALS;
     }
